@@ -457,9 +457,11 @@ contains
                if( (ix >= 1 .and. ix <= nx_rap) .and. &
                    (jx >= 1 .and. jx <= ny_rap) ) then
                   if(trim(thisvar_rrfs) == "tslb") then
-                     do kx=1,nz_rrfs-1
-                        tmp3d4br(i,j,kx)=tmp3d4b(ix,jx,kx)
-                     enddo
+                     if(maxval(tmp3d4b(ix,jx,:)) < 330.0) then
+                        do kx=1,nz_rrfs-1
+                           tmp3d4br(i,j,kx)=tmp3d4b(ix,jx,kx)
+                        enddo
+                     endif
                   else
                      do kx=1,nz_rrfs
                         tmp3d4br(i,j,kx)=tmp3d4b(ix,jx,kx)

@@ -43,6 +43,7 @@ program use_raphrrr_sfc
   integer(i_byte),allocatable :: lakemask_raphrrr(:,:)
   integer(i_byte),allocatable :: lakemask_rrfs(:,:)
   real(r_single),allocatable,target :: tmp2d4b(:,:)
+  real(r_single),allocatable,target :: tmp3d4b(:,:,:)
 
   integer :: i,j,k,n
   character*80 :: raphrrrfile
@@ -243,6 +244,44 @@ program use_raphrrr_sfc
 !     endif
 !     call raphrrr%close()
 !
+!   use lake temperature overwrite soil temperature over lake
+!
+! read in rrfs land mask
+      allocate(tmp2d4b(nx_rrfs,ny_rrfs))
+      allocate(tmp3d4b(nx_rrfs,ny_rrfs,nz_rrfs))
+      allocate(lakemask_rrfs(nx_rrfs,ny_rrfs))
+
+      call rrfs%open(trim(rrfsfile),"r",200)
+      call rrfs%get_var("clm_lake_initialized",nx_rrfs,ny_rrfs,tmp2d4b)
+      do j=1,ny_rrfs
+        do i=1,nx_rrfs
+           lakemask_rrfs(i,j)=int(tmp2d4b(i,j))
+        enddo
+      enddo
+
+      call rrfs%get_var("lake_tsfc",nx_rrfs,ny_rrfs,tmp2d4b)
+      call rrfs%get_var("tslb",nx_rrfs,ny_rrfs,nz_rrfs,tmp3d4b)
+   
+      do j=1,ny_rrfs
+        do i=1,nx_rrfs
+           if(lakemask_rrfs(i,j)==1 .and. tmp2d4b(i,j) > 100.0 ) then
+             do k=1,nz_rrfs
+               tmp3d4b(i,j,k)=tmp2d4b(i,j)
+             enddo
+           endif
+        enddo
+      enddo
+      call rrfs%close()
+
+      call rrfs%open(trim(rrfsfile),"w",200)
+      call rrfs%replace_var("tslb",nx_rrfs,ny_rrfs,nz_rrfs,tmp3d4b)
+      call rrfs%replace_var("tiice",nx_rrfs,ny_rrfs,nz_rrfs,tmp3d4b)
+      call rrfs%close()
+
+      deallocate(tmp2d4b)
+      deallocate(tmp3d4b)
+      deallocate(lakemask_rrfs)
+
      write(6,*) "=== USE_RAPHRRR_SFC REPROCCESS SUCCESS ==="
 
   endif ! mype==0
